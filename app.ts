@@ -1,13 +1,18 @@
 import express from 'express';
 import type { Request, Response, Application } from 'express';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
+import apiRouter from './routes';
 
-dotenv.config({
+config({
     quiet: true,
 });
 
 const app: Application = express();
-const PORT: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use('/api/v1', apiRouter);
 
 app.get('/', (req: Request, res: Response) => {
     return res.status(200).json({
@@ -16,6 +21,4 @@ app.get('/', (req: Request, res: Response) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`> ✅ Server is running at http://localhost:${PORT}`);
-});
+export default app;
