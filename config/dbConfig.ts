@@ -2,31 +2,27 @@ import mongoose from "mongoose";
 import { config } from "dotenv";
 
 config({
-    quiet: true,
+  quiet: true,
 });
 
 export default async (): Promise<void> => {
-    try {
+  try {
+    const URL = process.env.MONGODB_URL;
 
-        const URL = process.env.MONGODB_URL;
+    mongoose.connect(URL ?? "");
 
-        mongoose.connect(URL ?? "");
+    mongoose.connection.on("open", () => {
+      console.log("✅ Connected to database.");
+    });
 
-        const db = mongoose.connection;
+    mongoose.connection.on("error", (err) => {
+      console.error("MongoDB: Error", err);
+      process.exit(1);
+    });
 
-        db.on("open", () => {
-            console.log("✅ Connected to database.");
-        });
-
-        db.on("error", (err) => {
-            console.error("MongoDB: Error", err);
-            process.exit(1);
-        });
-
-        mongoose.Promise = global.Promise;
-
-    } catch (error) {
-        console.error("MongoDB: Error", error);
-        process.exit(1);
-    };
+    mongoose.Promise = global.Promise;
+  } catch (error) {
+    console.error("MongoDB: Error", error);
+    process.exit(1);
+  }
 };
