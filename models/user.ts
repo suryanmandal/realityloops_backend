@@ -35,7 +35,7 @@ const userSchema: Schema<IUser> = new Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 userSchema.pre<IUser>("save", async function (next) {
@@ -52,7 +52,7 @@ userSchema.pre<IUser>("save", async function (next) {
 });
 
 userSchema.methods.comparePassword = async function (
-  candidatePassword: string,
+  candidatePassword: string
 ): Promise<boolean> {
   const user = await mongoose
     .model("User")

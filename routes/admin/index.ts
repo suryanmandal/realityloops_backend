@@ -1,12 +1,12 @@
 import { Router } from "express";
+import authRouter from "./authRouter";
 
-const router = Router();
+const adminRouter = Router();
 
-// router.use("/control",);
-// router.use("/account",);
-// router.use("/orders",);
-// router.use("/products",);
-// router.use("/analytics",);
-// router.use("/settlements",);
+adminRouter.use("/auth", authRouter);
+// Future admin routes
+// adminRouter.use("/restaurants", restaurantsRouter);
+// adminRouter.use("/analytics", analyticsRouter);
+// adminRouter.use("/users", usersRouter);
 
-export default router;
+export default adminRouter;

@@ -1,12 +1,9 @@
 import { Router } from "express";
 
-const router = Router();
+const sellerRouter = Router();
 
-// router.use("/dashboard",);
-// router.use("/account",);
-// router.use("/orders",);
-// router.use("/products",);
-// router.use("/analytics",);
-// router.use("/settlements",);
+// Seller routes are now under /restaurant
+// This router is kept for backwards compatibility
+// Redirect to restaurant routes if needed
 
-export default router;
+export default sellerRouter;

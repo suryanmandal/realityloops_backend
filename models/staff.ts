@@ -1,9 +1,9 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcryptjs";
-import { IAdmin } from "../types/interfaces";
-import { UserRole, AccountStatus } from "../types/enums";
+import { IStaff } from "../types/interfaces";
+import { UserRole, AccountStatus, StaffRole } from "../types/enums";
 
-const adminSchema: Schema<IAdmin> = new Schema(
+const staffSchema: Schema<IStaff> = new Schema(
   {
     name: {
       type: String,
@@ -29,29 +29,40 @@ const adminSchema: Schema<IAdmin> = new Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: [8, "Password must be at least 8 characters long"],
+      minlength: [6, "Password must be at least 6 characters long"],
       select: false,
     },
     role: {
       type: String,
-      enum: [UserRole.ADMIN],
-      default: UserRole.ADMIN,
+      enum: [UserRole.STAFF],
+      default: UserRole.STAFF,
       immutable: true,
+    },
+    staffRole: {
+      type: String,
+      enum: Object.values(StaffRole),
+      required: [true, "Staff role is required"],
+    },
+    restaurantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: [true, "Restaurant ID is required"],
+      index: true,
+    },
+    addedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: [true, "Added by is required"],
     },
     status: {
       type: String,
       enum: Object.values(AccountStatus),
-      default: AccountStatus.PENDING_VERIFICATION,
+      default: AccountStatus.ACTIVE,
     },
     isEmailVerified: {
       type: Boolean,
-      default: false,
+      default: true, // Staff accounts are pre-verified
     },
-    permissions: [
-      {
-        type: String,
-      },
-    ],
     lastLogin: {
       type: Date,
     },
@@ -61,8 +72,11 @@ const adminSchema: Schema<IAdmin> = new Schema(
   }
 );
 
+// Compound index for efficient querying
+staffSchema.index({ restaurantId: 1, email: 1 });
+
 // Hash password before saving
-adminSchema.pre<IAdmin>("save", async function (next) {
+staffSchema.pre<IStaff>("save", async function (next) {
   if (!this.isModified("password") || !this.password) {
     return next();
   }
@@ -76,20 +90,20 @@ adminSchema.pre<IAdmin>("save", async function (next) {
 });
 
 // Compare password method
-adminSchema.methods.comparePassword = async function (
+staffSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
-  const admin = await mongoose
-    .model("Admin")
+  const staff = await mongoose
+    .model("Staff")
     .findById(this._id)
     .select("+password")
     .exec();
 
-  if (!admin || !admin.password) {
+  if (!staff || !staff.password) {
     return false;
   }
 
-  return bcrypt.compare(candidatePassword, admin.password);
+  return bcrypt.compare(candidatePassword, staff.password);
 };
 
-export default mongoose.model<IAdmin>("Admin", adminSchema);
+export default mongoose.model<IStaff>("Staff", staffSchema);

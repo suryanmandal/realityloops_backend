@@ -1,7 +1,10 @@
 import express from 'express';
 import type { Request, Response, Application } from 'express';
 import { config } from 'dotenv';
+import morgan from 'morgan';
 import apiRouter from './routes';
+import { notFoundHandler, errorHandler } from './middleware/error.middleware';
+import { logger } from './utils/logger';
 
 config({
     quiet: true,
@@ -9,16 +12,38 @@ config({
 
 const app: Application = express();
 
+// Morgan HTTP request logger
+if (process.env.NODE_ENV === 'development') {
+    app.use(morgan('dev'));
+} else {
+    // Custom morgan format for production
+    app.use(morgan('combined', {
+        stream: {
+            write: (message: string) => logger.http(message.trim())
+        }
+    }));
+}
+
+// Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api/v1', apiRouter);
-
+// Health check route
 app.get('/', (req: Request, res: Response) => {
     return res.status(200).json({
         status: 'success',
-        message: 'Server is running',
+        message: 'Reality Loops API Server is running',
+        timestamp: new Date().toISOString(),
     });
 });
+
+// API routes
+app.use('/api/v1', apiRouter);
+
+// 404 handler
+app.use(notFoundHandler);
+
+// Global error handler
+app.use(errorHandler);
 
 export default app;
