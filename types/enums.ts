@@ -41,3 +41,14 @@ export enum TokenType {
   ACCESS = "access",
   REFRESH = "refresh",
 }
+
+export enum ProductStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  OUT_OF_STOCK = "OUT_OF_STOCK",
+}
+
+export enum CategoryStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+}

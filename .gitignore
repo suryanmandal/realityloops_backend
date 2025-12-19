@@ -10,3 +10,12 @@
 /logs
 
 /coverage
+
+
+uploads/*
+
+!uploads/*/
+
+uploads/*/*
+
+!uploads/*/.gitkeep

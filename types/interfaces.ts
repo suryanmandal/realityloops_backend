@@ -1,4 +1,10 @@
-import { UserRole, StaffRole, AccountStatus } from "./enums";
+import {
+  UserRole,
+  StaffRole,
+  AccountStatus,
+  CategoryStatus,
+  ProductStatus,
+} from "./enums";
 import { Document, Types } from "mongoose";
 
 /**
@@ -84,4 +90,32 @@ export interface IAuthResponse {
     token?: string;
     refreshToken?: string;
   };
+}
+
+export interface ICategory extends Document {
+  name: string;
+  description?: string;
+  image?: string;
+  status: CategoryStatus;
+  restaurantId: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IProduct extends Document {
+  title: string;
+  description: string;
+  mrp: number;
+  price: number;
+  image?: string;
+  arModelPath?: string; // Path to AR model file
+  categoryId: Types.ObjectId;
+  restaurantId: Types.ObjectId;
+  status: ProductStatus;
+  stock?: number;
+  isVegetarian?: boolean;
+  isAvailable: boolean;
+  preparationTime?: number; // in minutes
+  createdAt: Date;
+  updatedAt: Date;
 }
