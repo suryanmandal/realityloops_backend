@@ -34,7 +34,7 @@ export class ProductController {
           : undefined,
         isVegetarian: req.body.isVegetarian === "true",
         image: imagePath,
-        arModelPath: arModelPath,
+        arModelPath: arModelPath || req.body.arModelPath, // Use uploaded file path or URL from body
       });
 
       // If creation failed, delete uploaded files

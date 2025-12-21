@@ -5,7 +5,12 @@ import { Request } from "express";
 
 // Create upload directories if they don't exist
 const createUploadDirs = () => {
-  const dirs = ["uploads/products", "uploads/categories", "uploads/ar-models"];
+  const dirs = [
+    "uploads/products",
+    "uploads/categories",
+    "uploads/ar-models",
+    "public/uploads/3d-models", // Public folder for admin uploads
+  ];
 
   dirs.forEach((dir) => {
     if (!fs.existsSync(dir)) {
@@ -144,3 +149,47 @@ export const deleteFile = (filePath: string): void => {
     fs.unlinkSync(filePath);
   }
 };
+
+// Storage configuration for admin 3D model uploads (public folder)
+const admin3DModelStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/uploads/3d-models");
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "3d-model-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+// File filter specifically for 3D models
+const model3DFileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
+  const allowedTypes = /glb|gltf|usdz/;
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase(),
+  );
+
+  if (extname) {
+    cb(null, true);
+  } else {
+    cb(
+      new Error(
+        "Only .glb, .gltf, or .usdz 3D model files are allowed for upload!",
+      ),
+    );
+  }
+};
+
+/**
+ * Admin 3D Model Upload Middleware
+ * Saves files to public/uploads/3d-models for public access
+ * Only accepts .glb, .gltf, .usdz files
+ */
+export const uploadAdmin3DModel = multer({
+  storage: admin3DModelStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for 3D models
+  fileFilter: model3DFileFilter,
+}).single("model");

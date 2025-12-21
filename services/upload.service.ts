@@ -1,0 +1,100 @@
+import { logger } from "../utils/logger";
+import { deleteFile } from "../middleware/upload.middleware";
+
+/**
+ * Upload Service Class
+ * Handles file upload business logic
+ */
+export class UploadService {
+  /**
+   * Process 3D model upload and generate public URL
+   */
+  static async process3DModelUpload(
+    file: Express.Multer.File | undefined,
+    baseUrl: string
+  ): Promise<{ success: boolean; message: string; data?: { arModelPath: string; filename: string } }> {
+    try {
+      if (!file) {
+        return {
+          success: false,
+          message: "No file uploaded. Please provide a 3D model file.",
+        };
+      }
+
+      // Validate file extension
+      const allowedExtensions = ['.glb', '.gltf', '.usdz'];
+      const fileExtension = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
+
+      if (!allowedExtensions.includes(fileExtension)) {
+        // Delete the uploaded file
+        deleteFile(file.path);
+        return {
+          success: false,
+          message: `Invalid file type. Only ${allowedExtensions.join(', ')} files are allowed.`,
+        };
+      }
+
+      // Generate public URL path
+      const arModelPath = `${baseUrl}/uploads/3d-models/${file.filename}`;
+
+      logger.info("3D model uploaded successfully", {
+        filename: file.filename,
+        size: file.size,
+        arModelPath: arModelPath,
+      });
+
+      return {
+        success: true,
+        message: "3D model uploaded successfully",
+        data: {
+          arModelPath: arModelPath,
+          filename: file.filename,
+        },
+      };
+    } catch (error: any) {
+      logger.error("Error processing 3D model upload", {
+        error: error.message,
+      });
+
+      // Clean up file if error occurs
+      if (file?.path) {
+        deleteFile(file.path);
+      }
+
+      return {
+        success: false,
+        message: "Failed to process 3D model upload",
+      };
+    }
+  }
+
+  /**
+   * Delete 3D model file
+   */
+  static async delete3DModel(
+    filename: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const filePath = `public/uploads/3d-models/${filename}`;
+
+      deleteFile(filePath);
+
+      logger.info("3D model deleted", { filename });
+
+      return {
+        success: true,
+        message: "3D model deleted successfully",
+      };
+    } catch (error: any) {
+      logger.error("Error deleting 3D model", {
+        error: error.message,
+        filename,
+      });
+
+      return {
+        success: false,
+        message: "Failed to delete 3D model",
+      };
+    }
+  }
+}

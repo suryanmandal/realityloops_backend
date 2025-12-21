@@ -28,6 +28,9 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from public folder (for uploaded 3D models)
+app.use('/uploads', express.static('public/uploads'));
+
 // Health check route
 app.get('/', (req: Request, res: Response) => {
     return res.status(200).json({

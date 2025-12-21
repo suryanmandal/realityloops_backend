@@ -108,7 +108,7 @@ export interface IProduct extends Document {
   mrp: number;
   price: number;
   image?: string;
-  arModelPath?: string; // Path to AR model file
+  arModelPath?: string; // Public URL to AR model file
   categoryId: Types.ObjectId;
   restaurantId: Types.ObjectId;
   status: ProductStatus;

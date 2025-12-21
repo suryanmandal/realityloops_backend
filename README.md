@@ -106,11 +106,13 @@ npm start
 | 11                    | POST   | `/api/v1/admin/auth/resend-otp`           | Public        | Resend admin OTP             |
 | 12                    | POST   | `/api/v1/admin/auth/forgot-password`      | Public        | Admin password reset request |
 | 13                    | POST   | `/api/v1/admin/auth/reset-password`       | Public        | Reset admin password         |
+| 14                    | POST   | `/api/v1/admin/upload/3d-model`           | 🔒 Admin      | Upload 3D model file         |
+| 15                    | DELETE | `/api/v1/admin/upload/3d-model/:filename` | 🔒 Admin      | Delete 3D model file         |
 | **Staff Routes**      |
-| 14                    | POST   | `/api/v1/staff/auth/login`                | Public        | Staff login                  |
-| 15                    | POST   | `/api/v1/staff/auth/change-password`      | 🔒 Staff      | Change staff password        |
+| 16                    | POST   | `/api/v1/staff/auth/login`                | Public        | Staff login                  |
+| 17                    | POST   | `/api/v1/staff/auth/change-password`      | 🔒 Staff      | Change staff password        |
 
-**Total: 15 API Endpoints**
+**Total: 17 API Endpoints**
 
 ---
 
@@ -431,6 +433,50 @@ Response (200):
 {
   "success": true,
   "message": "Password reset successful"
+}
+```
+
+#### File Upload Routes (🔒 Protected - Admin Only)
+
+##### 7. Upload 3D Model
+
+```http
+POST /api/v1/admin/upload/3d-model
+Authorization: Bearer <admin_access_token>
+Content-Type: multipart/form-data
+
+Request Body (form-data):
+{
+  "model": <file> // 3D model file (.glb, .gltf, or .usdz)
+}
+
+Response (201):
+{
+  "success": true,
+  "message": "3D model uploaded successfully",
+  "data": {
+    "url": "http://localhost:5000/uploads/3d-models/3d-model-1234567890-123456789.glb",
+    "filename": "3d-model-1234567890-123456789.glb"
+  }
+}
+
+Notes:
+- Maximum file size: 100MB
+- Allowed formats: .glb, .gltf, .usdz
+- Files are stored in public/uploads/3d-models/
+- URL can be used directly in products (arModelPath field)
+```
+
+##### 8. Delete 3D Model
+
+```http
+DELETE /api/v1/admin/upload/3d-model/:filename
+Authorization: Bearer <admin_access_token>
+
+Response (200):
+{
+  "success": true,
+  "message": "3D model deleted successfully"
 }
 ```
 

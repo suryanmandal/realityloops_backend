@@ -28,7 +28,7 @@ const productSchema: Schema<IProduct> = new Schema(
       type: String, // Path to product image
     },
     arModelPath: {
-      type: String, // Path to AR model file (e.g., .glb, .gltf)
+      type: String, // Public URL to AR model file (e.g., .glb, .gltf)
     },
     categoryId: {
       type: Schema.Types.ObjectId,

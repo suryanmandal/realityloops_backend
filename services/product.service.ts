@@ -169,6 +169,7 @@ export class ProductService {
       categoryId?: string;
       image?: string;
       arModelPath?: string;
+      arModelUrl?: string;
       status?: ProductStatus;
       stock?: number;
       isVegetarian?: boolean;
