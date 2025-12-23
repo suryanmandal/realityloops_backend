@@ -52,3 +52,14 @@ export enum CategoryStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
 }
+
+/**
+ * Enum for order status in the order lifecycle
+ */
+export enum OrderStatus {
+  IDLE = "IDLE", // Order created, waiting for waiter to accept
+  PREPARING = "PREPARING", // Accepted by waiter, being prepared in kitchen
+  PREPARED = "PREPARED", // Kitchen finished, ready for delivery
+  DELIVERED = "DELIVERED", // Delivered to customer table
+}
+

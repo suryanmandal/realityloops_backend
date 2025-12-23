@@ -4,6 +4,7 @@ import {
   AccountStatus,
   CategoryStatus,
   ProductStatus,
+  OrderStatus,
 } from "./enums";
 import { Document, Types } from "mongoose";
 
@@ -119,3 +120,54 @@ export interface IProduct extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Order Item interface - individual item in an order
+ */
+export interface IOrderItem {
+  productId: Types.ObjectId;
+  productName: string; // Snapshot for history
+  quantity: number;
+  unitPrice: number; // Price at time of order
+  subtotal: number; // quantity * unitPrice
+}
+
+/**
+ * Order interface
+ */
+export interface IOrder extends Document {
+  orderNumber: string; // Unique order number (auto-generated)
+  restaurantId: Types.ObjectId; // Reference to Restaurant
+  tableNumber: string; // Table identifier (e.g., "T1", "T12", "Counter")
+
+  // Order items
+  items: IOrderItem[];
+
+  // Pricing
+  totalAmount: number; // Calculated from items
+  paymentAmount: number; // Amount to be paid (could include tax/discount in future)
+
+  // Status & Payment
+  status: OrderStatus;
+  isPaid: boolean;
+
+  // Staff assignments
+  waiterStaffId?: Types.ObjectId; // Reference to Staff (waiter who accepted/handled)
+  kitchenStaffId?: Types.ObjectId; // Reference to Staff (kitchen who prepared)
+
+  // Timeline tracking
+  orderAcceptedAt?: Date; // When waiter accepts the order
+  preparingStartedAt?: Date; // When kitchen starts preparing
+  preparedAt?: Date; // When kitchen finishes preparing
+  deliveredAt?: Date; // When waiter delivers to customer
+  paidAt?: Date; // When payment is received
+
+  // Notes
+  customerNotes?: string; // Special requests from customer
+  kitchenNotes?: string; // Internal notes for kitchen
+
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { JWTService } from "../services/jwt.service";
 import { logger } from "../utils/logger";
 import { IJWTPayload } from "../types/interfaces";
-import { UserRole } from "../types/enums";
+import { UserRole, StaffRole } from "../types/enums";
 
 // Extend Express Request to include user property
 declare global {
@@ -137,3 +137,80 @@ export const isRestaurantOrStaff = (
 
   next();
 };
+
+/**
+ * Middleware to check if user is kitchen staff
+ */
+export const isKitchenStaff = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized. Please login.",
+    });
+  }
+
+  if (req.user.role !== UserRole.STAFF) {
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden. Access restricted to staff members only.",
+    });
+  }
+
+  if (req.user.staffRole !== StaffRole.KITCHEN) {
+    logger.warn("Access denied - not kitchen staff", {
+      userId: req.user.id,
+      staffRole: req.user.staffRole,
+      path: req.path,
+    });
+
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden. Access restricted to kitchen staff only.",
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware to check if user is waiter/desk staff
+ */
+export const isWaiterStaff = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized. Please login.",
+    });
+  }
+
+  if (req.user.role !== UserRole.STAFF) {
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden. Access restricted to staff members only.",
+    });
+  }
+
+  if (req.user.staffRole !== StaffRole.WAITER_DESK) {
+    logger.warn("Access denied - not waiter staff", {
+      userId: req.user.id,
+      staffRole: req.user.staffRole,
+      path: req.path,
+    });
+
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden. Access restricted to waiter/desk staff only.",
+    });
+  }
+
+  next();
+};
+

@@ -1,10 +1,19 @@
-import { beforeAll, afterAll, afterEach } from 'vitest';
+import { beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { config } from 'dotenv';
 
 // Load environment variables for testing
 config({ path: '.env.test' });
+
+// Mock email service to prevent actual email sending in tests
+vi.mock('../utils/email.service', () => ({
+  EmailService: {
+    sendOTPEmail: vi.fn().mockResolvedValue(true),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(true),
+    sendEmail: vi.fn().mockResolvedValue(true),
+  },
+}));
 
 let mongoServer: MongoMemoryServer;
 
