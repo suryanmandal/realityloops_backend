@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 
 /**
  * E2E Test Suite for Restaurant Authentication
- * 
+ *
  * Tests cover:
  * 1. Restaurant Signup
  * 2. Email Verification (OTP)
@@ -333,7 +333,7 @@ describe('Restaurant Authentication - E2E Tests', () => {
       // Create unverified restaurant
       // Password will be hashed by the model's pre-save hook
       const unverifiedEmail = `unverified${Date.now()}@test.com`;
-      
+
       await Restaurant.create({
         restaurantName: 'Unverified Restaurant',
         ownerName: 'Owner',
@@ -529,7 +529,7 @@ describe('Restaurant Authentication - E2E Tests', () => {
 
     it('should reset password successfully with valid OTP', async () => {
       const newPassword = 'NewPassword123!';
-      
+
       const response = await request(app)
         .post('/api/v1/restaurant/auth/reset-password')
         .send({
