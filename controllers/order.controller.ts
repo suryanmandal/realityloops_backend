@@ -67,7 +67,10 @@ export class OrderController {
         limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
       };
 
-      const result = await OrderService.getOrders(restaurantId, filters);
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
+      const result = await OrderService.getOrders(restaurantId, domain, filters);
 
       const statusCode = result.success ? 200 : 400;
       return res.status(statusCode).json(result);
@@ -277,10 +280,14 @@ export class OrderController {
         limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
       };
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const result = await OrderService.getOrdersByStaff(
         restaurantId,
         staffId,
         staffRole,
+        domain,
         filters
       );
 

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { RestaurantAdminService } from "../services/restaurant.admin.service";
+import { RestaurantStaffService } from "../services/restaurant.staff.service";
 import { logger } from "../utils/logger";
 
 /**
@@ -174,6 +175,78 @@ export class RestaurantProfileController {
       logger.error("Get restaurant analytics controller error", {
         error: error.message,
         restaurantId: req.user?.id,
+      });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * @route   GET /api/v1/restaurant/staff
+   * @desc    Get all staff members for the current restaurant
+   * @access  Private (Restaurant only)
+   */
+  static async getRestaurantStaff(req: Request, res: Response): Promise<Response> {
+    try {
+      const restaurantId = req.user?.id;
+
+      if (!restaurantId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const result = await RestaurantStaffService.getRestaurantStaff(restaurantId);
+
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+
+      return res.status(200).json(result);
+    } catch (error: any) {
+      logger.error("Get restaurant staff controller error", {
+        error: error.message,
+        restaurantId: req.user?.id,
+      });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * @route   DELETE /api/v1/restaurant/staff/:staffId
+   * @desc    Delete a staff member
+   * @access  Private (Restaurant only)
+   */
+  static async deleteRestaurantStaff(req: Request, res: Response): Promise<Response> {
+    try {
+      const restaurantId = req.user?.id;
+      const { staffId } = req.params;
+
+      if (!restaurantId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const result = await RestaurantStaffService.deleteRestaurantStaff(restaurantId, staffId);
+
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+
+      return res.status(200).json(result);
+    } catch (error: any) {
+      logger.error("Delete restaurant staff controller error", {
+        error: error.message,
+        restaurantId: req.user?.id,
+        staffId: req.params.staffId,
       });
       return res.status(500).json({
         success: false,

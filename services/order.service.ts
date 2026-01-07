@@ -99,6 +99,7 @@ export class OrderService {
    */
   static async getOrders(
     restaurantId: string,
+    domain?: string,
     filters?: {
       status?: OrderStatus;
       isPaid?: boolean;
@@ -143,7 +144,7 @@ export class OrderService {
       const skip = (page - 1) * limit;
 
       // Execute query with pagination
-      const [orders, total] = await Promise.all([
+      const [orderDocs, total] = await Promise.all([
         Order.find(query)
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -152,11 +153,47 @@ export class OrderService {
             { path: "items.productId", select: "title image" },
             { path: "waiterStaffId", select: "name email" },
             { path: "kitchenStaffId", select: "name email" },
-          ])
-          .lean(),
+          ]),
         Order.countDocuments(query),
       ]);
 
+      // Convert to plain objects and add domain to product images if domain is provided
+      if (domain) {
+        const processedOrders = orderDocs.map(orderDoc => {
+          const orderObject = orderDoc.toObject();
+          if (orderObject.items && Array.isArray(orderObject.items)) {
+            orderObject.items = orderObject.items.map(item => {
+              // Type assertion to handle populated product data
+              const populatedProduct = item.productId as any;
+              if (populatedProduct && populatedProduct.image) {
+                // If image path is already a full URL, don't modify it
+                if (!populatedProduct.image.startsWith('http')) {
+                  populatedProduct.image = `${domain}/${populatedProduct.image}`;
+                }
+              }
+              return item;
+            });
+          }
+          return orderObject;
+        });
+
+        return {
+          success: true,
+          message: "Orders retrieved successfully",
+          data: {
+            orders: processedOrders,
+            pagination: {
+              page,
+              limit,
+              total,
+              totalPages: Math.ceil(total / limit),
+            },
+          },
+        };
+      }
+
+      // Convert to plain objects without domain modification
+      const orders = orderDocs.map(doc => doc.toObject());
       return {
         success: true,
         message: "Orders retrieved successfully",
@@ -541,6 +578,7 @@ export class OrderService {
     restaurantId: string,
     staffId: string,
     staffRole: StaffRole,
+    domain?: string,
     filters?: {
       status?: OrderStatus;
       page?: number;
@@ -566,18 +604,54 @@ export class OrderService {
       const limit = filters?.limit || 20;
       const skip = (page - 1) * limit;
 
-      const [orders, total] = await Promise.all([
+      const [orderDocs, total] = await Promise.all([
         Order.find(query)
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
           .populate([
             { path: "items.productId", select: "title image" },
-          ])
-          .lean(),
+          ]),
         Order.countDocuments(query),
       ]);
 
+      // Convert to plain objects and add domain to product images if domain is provided
+      if (domain) {
+        const processedOrders = orderDocs.map(orderDoc => {
+          const orderObject = orderDoc.toObject();
+          if (orderObject.items && Array.isArray(orderObject.items)) {
+            orderObject.items = orderObject.items.map(item => {
+              // Type assertion to handle populated product data
+              const populatedProduct = item.productId as any;
+              if (populatedProduct && populatedProduct.image) {
+                // If image path is already a full URL, don't modify it
+                if (!populatedProduct.image.startsWith('http')) {
+                  populatedProduct.image = `${domain}/${populatedProduct.image}`;
+                }
+              }
+              return item;
+            });
+          }
+          return orderObject;
+        });
+
+        return {
+          success: true,
+          message: "Orders retrieved successfully",
+          data: {
+            orders: processedOrders,
+            pagination: {
+              page,
+              limit,
+              total,
+              totalPages: Math.ceil(total / limit),
+            },
+          },
+        };
+      }
+
+      // Convert to plain objects without domain modification
+      const orders = orderDocs.map(doc => doc.toObject());
       return {
         success: true,
         message: "Orders retrieved successfully",
