@@ -43,6 +43,7 @@ export class ProductService {
       isVegetarian?: boolean;
       preparationTime?: number;
     },
+    domain?: string
   ) {
     try {
       // Verify category exists and belongs to restaurant
@@ -75,6 +76,17 @@ export class ProductService {
         productId: product._id,
         restaurantId,
       });
+
+      // Add domain to image and AR model paths if domain is provided
+      if (domain) {
+        const productObj = product.toObject();
+        const processedProduct = this.addDomainToPaths(productObj, domain);
+        return {
+          success: true,
+          message: "Product created successfully",
+          data: { product: processedProduct },
+        };
+      }
 
       return {
         success: true,
@@ -220,6 +232,7 @@ export class ProductService {
       isAvailable?: boolean;
       preparationTime?: number;
     },
+    domain?: string
   ) {
     try {
       const product = await Product.findOne({
@@ -278,6 +291,17 @@ export class ProductService {
       await product.save();
 
       logger.info("Product updated", { productId, restaurantId });
+
+      // Add domain to image and AR model paths if domain is provided
+      if (domain) {
+        const productObj = product.toObject();
+        const processedProduct = this.addDomainToPaths(productObj, domain);
+        return {
+          success: true,
+          message: "Product updated successfully",
+          data: { product: processedProduct },
+        };
+      }
 
       return {
         success: true,

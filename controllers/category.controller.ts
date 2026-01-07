@@ -20,12 +20,15 @@ export class CategoryController {
         });
       }
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const imagePath = req.file?.path;
 
       const result = await CategoryService.createCategory(restaurantId, {
         ...req.body,
         image: imagePath,
-      });
+      }, domain);
 
       // If creation failed and image was uploaded, delete it
       if (!result.success && imagePath) {
@@ -67,12 +70,15 @@ export class CategoryController {
         });
       }
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const filters = {
         status: req.query.status as any,
         search: req.query.search as string,
       };
 
-      const result = await CategoryService.getCategories(restaurantId, filters);
+      const result = await CategoryService.getCategories(restaurantId, domain, filters);
 
       return res.status(200).json(result);
     } catch (error: any) {
@@ -103,7 +109,10 @@ export class CategoryController {
         });
       }
 
-      const result = await CategoryService.getCategoryById(restaurantId, id);
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
+      const result = await CategoryService.getCategoryById(restaurantId, id, domain);
 
       const statusCode = result.success ? 200 : 404;
       return res.status(statusCode).json(result);
@@ -135,12 +144,15 @@ export class CategoryController {
         });
       }
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const imagePath = req.file?.path;
 
       const result = await CategoryService.updateCategory(restaurantId, id, {
         ...req.body,
         ...(imagePath && { image: imagePath }),
-      });
+      }, domain);
 
       // If update failed and new image was uploaded, delete it
       if (!result.success && imagePath) {

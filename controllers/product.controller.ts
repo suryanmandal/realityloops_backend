@@ -24,6 +24,9 @@ export class ProductController {
       const imagePath = files?.image?.[0]?.path;
       const arModelPath = files?.arModel?.[0]?.path;
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const result = await ProductService.createProduct(restaurantId, {
         ...req.body,
         mrp: parseFloat(req.body.mrp),
@@ -35,7 +38,7 @@ export class ProductController {
         isVegetarian: req.body.isVegetarian === "true",
         image: imagePath,
         arModelPath: arModelPath || req.body.arModelPath, // Use uploaded file path or URL from body
-      });
+      }, domain);
 
       // If creation failed, delete uploaded files
       if (!result.success) {
@@ -186,10 +189,14 @@ export class ProductController {
       if (imagePath) updateData.image = imagePath;
       if (arModelPath) updateData.arModelPath = arModelPath;
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const result = await ProductService.updateProduct(
         restaurantId,
         id,
         updateData,
+        domain
       );
 
       // If update failed, delete newly uploaded files

@@ -14,6 +14,7 @@ export class CategoryService {
       description?: string;
       image?: string;
     },
+    domain?: string,
   ) {
     try {
       // Check if category with same name exists for this restaurant
@@ -39,6 +40,17 @@ export class CategoryService {
         restaurantId,
       });
 
+      // Add domain to image path if domain is provided
+      if (domain) {
+        const categoryObj = category.toObject();
+        const processedCategory = this.addDomainToCategoryImage(categoryObj, domain);
+        return {
+          success: true,
+          message: "Category created successfully",
+          data: { category: processedCategory },
+        };
+      }
+
       return {
         success: true,
         message: "Category created successfully",
@@ -54,10 +66,25 @@ export class CategoryService {
   }
 
   /**
+   * Add domain to category image path
+   */
+  private static addDomainToCategoryImage(category: any, domain: string) {
+    if (category.image) {
+      // If image path is already a full URL, don't modify it
+      if (!category.image.startsWith('http')) {
+        category.image = `${domain}/${category.image}`;
+      }
+    }
+
+    return category;
+  }
+
+  /**
    * Get all categories for a restaurant
    */
   static async getCategories(
     restaurantId: string,
+    domain?: string,
     filters?: {
       status?: CategoryStatus;
       search?: string;
@@ -76,6 +103,18 @@ export class CategoryService {
 
       const categories = await Category.find(query).sort({ createdAt: -1 });
 
+      // Add domain to image paths if domain is provided
+      if (domain) {
+        const processedCategories = categories.map(category => {
+          const categoryObj = category.toObject();
+          return this.addDomainToCategoryImage(categoryObj, domain);
+        });
+        return {
+          success: true,
+          data: { categories: processedCategories, count: categories.length },
+        };
+      }
+
       return {
         success: true,
         data: { categories, count: categories.length },
@@ -92,7 +131,7 @@ export class CategoryService {
   /**
    * Get category by ID
    */
-  static async getCategoryById(restaurantId: string, categoryId: string) {
+  static async getCategoryById(restaurantId: string, categoryId: string, domain?: string) {
     try {
       const category = await Category.findOne({
         _id: categoryId,
@@ -103,6 +142,16 @@ export class CategoryService {
         return {
           success: false,
           message: "Category not found",
+        };
+      }
+
+      // Add domain to image path if domain is provided
+      if (domain) {
+        const categoryObj = category.toObject();
+        const processedCategory = this.addDomainToCategoryImage(categoryObj, domain);
+        return {
+          success: true,
+          data: { category: processedCategory },
         };
       }
 
@@ -131,6 +180,7 @@ export class CategoryService {
       image?: string;
       status?: CategoryStatus;
     },
+    domain?: string,
   ) {
     try {
       const category = await Category.findOne({
@@ -171,6 +221,17 @@ export class CategoryService {
       await category.save();
 
       logger.info("Category updated", { categoryId, restaurantId });
+
+      // Add domain to image path if domain is provided
+      if (domain) {
+        const categoryObj = category.toObject();
+        const processedCategory = this.addDomainToCategoryImage(categoryObj, domain);
+        return {
+          success: true,
+          message: "Category updated successfully",
+          data: { category: processedCategory },
+        };
+      }
 
       return {
         success: true,
