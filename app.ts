@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import apiRouter from './routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 import { logger } from './utils/logger';
+import cors from 'cors';
+import path from 'path';
 
 config({
     quiet: true,
@@ -24,12 +26,17 @@ if (process.env.NODE_ENV === 'development') {
     }));
 }
 
+// CORS middleware
+app.use(cors({
+    origin: '*',
+}));
+
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from public folder (for uploaded 3D models)
-app.use('/uploads', express.static('public/uploads'));
+app.use('/uploads', express.static(path.join(process.cwd() + '/uploads')));
 
 // Health check route
 app.get('/', (req: Request, res: Response) => {

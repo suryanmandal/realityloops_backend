@@ -6,6 +6,27 @@ import { deleteFile } from "../middleware/upload.middleware";
 
 export class ProductService {
   /**
+   * Add domain to image and AR model paths
+   */
+  private static addDomainToPaths(product: any, domain: string) {
+    if (product.image) {
+      // If image path is already a full URL, don't modify it
+      if (!product.image.startsWith('http')) {
+        product.image = `${domain}/${product.image}`;
+      }
+    }
+
+    if (product.arModelPath) {
+      // If AR model path is already a full URL, don't modify it
+      if (!product.arModelPath.startsWith('http')) {
+        product.arModelPath = `${domain}/${product.arModelPath}`;
+      }
+    }
+
+    return product;
+  }
+
+  /**
    * Create a new product
    */
   static async createProduct(
@@ -82,6 +103,7 @@ export class ProductService {
       minPrice?: number;
       maxPrice?: number;
     },
+    domain?: string
   ) {
     try {
       const query: any = { restaurantId };
@@ -112,6 +134,18 @@ export class ProductService {
         .populate("categoryId", "name")
         .sort({ createdAt: -1 });
 
+      // Add domain to image and AR model paths if domain is provided
+      if (domain) {
+        const processedProducts = products.map(product => {
+          const productObj = product.toObject();
+          return this.addDomainToPaths(productObj, domain);
+        });
+        return {
+          success: true,
+          data: { products: processedProducts, count: processedProducts.length },
+        };
+      }
+
       return {
         success: true,
         data: { products, count: products.length },
@@ -128,7 +162,7 @@ export class ProductService {
   /**
    * Get product by ID
    */
-  static async getProductById(restaurantId: string, productId: string) {
+  static async getProductById(restaurantId: string, productId: string, domain?: string) {
     try {
       const product = await Product.findOne({
         _id: productId,
@@ -139,6 +173,16 @@ export class ProductService {
         return {
           success: false,
           message: "Product not found",
+        };
+      }
+
+      // Add domain to image and AR model paths if domain is provided
+      if (domain) {
+        const productObj = product.toObject();
+        const processedProduct = this.addDomainToPaths(productObj, domain);
+        return {
+          success: true,
+          data: { product: processedProduct },
         };
       }
 

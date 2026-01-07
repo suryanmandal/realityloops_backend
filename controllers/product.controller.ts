@@ -78,6 +78,9 @@ export class ProductController {
         });
       }
 
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
       const filters = {
         categoryId: req.query.categoryId as string,
         status: req.query.status as any,
@@ -96,7 +99,7 @@ export class ProductController {
           : undefined,
       };
 
-      const result = await ProductService.getProducts(restaurantId, filters);
+      const result = await ProductService.getProducts(restaurantId, filters, domain);
 
       return res.status(200).json(result);
     } catch (error: any) {
@@ -127,7 +130,10 @@ export class ProductController {
         });
       }
 
-      const result = await ProductService.getProductById(restaurantId, id);
+      // Get domain from environment variable
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+
+      const result = await ProductService.getProductById(restaurantId, id, domain);
 
       const statusCode = result.success ? 200 : 404;
       return res.status(statusCode).json(result);

@@ -12,6 +12,13 @@ const uploadRouter = Router();
 uploadRouter.post("/3d-model", uploadAdmin3DModel, UploadController.upload3DModel);
 
 /**
+ * @route   POST /api/v1/admin/upload/3d-model/:productId
+ * @desc    Upload 3D model file and update product AR model path
+ * @access  Private (Admin only)
+ */
+uploadRouter.post("/3d-model/:productId", uploadAdmin3DModel, UploadController.upload3DModelAndUpdateProduct);
+
+/**
  * @route   DELETE /api/v1/admin/upload/3d-model/:filename
  * @desc    Delete 3D model file
  * @access  Private (Admin only)

@@ -4,29 +4,29 @@ import { validate } from "../../middleware/validation.middleware";
 import { authenticate, isRestaurant } from "../../middleware/auth.middleware";
 import { uploadProductFiles } from "../../middleware/upload.middleware";
 import {
-  createProductSchema,
-  updateProductSchema,
-  bulkUpdateAvailabilitySchema,
+    createProductSchema,
+    updateProductSchema,
+    bulkUpdateAvailabilitySchema,
 } from "../../validation/product.validation";
 
 const productRouter = Router();
-
+``
 // All product routes require authentication and restaurant role
 productRouter.use(authenticate, isRestaurant);
 
 // Bulk update availability (before /:id to avoid route conflicts)
 productRouter.patch(
-  "/bulk-availability",
-  validate(bulkUpdateAvailabilitySchema),
-  ProductController.bulkUpdateAvailability,
+    "/bulk-availability",
+    validate(bulkUpdateAvailabilitySchema),
+    ProductController.bulkUpdateAvailability,
 );
 
 // Create product with image and AR model upload
 productRouter.post(
-  "/",
-  uploadProductFiles,
-  validate(createProductSchema),
-  ProductController.createProduct,
+    "/",
+    uploadProductFiles,
+    validate(createProductSchema),
+    ProductController.createProduct,
 );
 
 // Get all products
@@ -37,10 +37,10 @@ productRouter.get("/:id", ProductController.getProductById);
 
 // Update product with optional image and AR model upload
 productRouter.put(
-  "/:id",
-  uploadProductFiles,
-  validate(updateProductSchema),
-  ProductController.updateProduct,
+    "/:id",
+    uploadProductFiles,
+    validate(updateProductSchema),
+    ProductController.updateProduct,
 );
 
 // Delete product
