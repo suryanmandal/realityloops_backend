@@ -10,6 +10,7 @@ export { default as FurnitureStore } from "./furnitureStore";
 export { default as FurnitureCategory } from "./furnitureCategory";
 export { default as FurnitureProduct } from "./furnitureProduct";
 export { default as ForgeModel } from "./forgeModel";
+export { default as SystemSetting } from "./systemSetting";
 
 
 

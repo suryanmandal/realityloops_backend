@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { ProductService } from "../services/product.service";
 import { logger } from "../utils/logger";
 import { deleteFile } from "../middleware/upload.middleware";
+import { SystemSetting } from "../models";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -463,6 +464,447 @@ export class ProductController {
       return res.status(500).json({
         success: false,
         message: "Internal server error during 3D generation",
+      });
+    }
+  }
+
+  /**
+   * @route   POST /api/v1/restaurant/product/upload-3d/:id
+   * @desc    Upload an externally generated 3D model (.glb)
+   * @access  Private (Restaurant)
+   */
+  static async upload3DModel(req: Request, res: Response): Promise<Response> {
+    try {
+      const restaurantId = req.user?.id;
+      const { id } = req.params;
+
+      if (!restaurantId) {
+        if (req.file) deleteFile(req.file.path);
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No 3D model file uploaded",
+        });
+      }
+
+      // Check if product exists and belongs to restaurant
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+      const productResult = await ProductService.getProductById(restaurantId, id, domain);
+      if (!productResult.success) {
+        deleteFile(req.file.path);
+        return res.status(404).json({
+          success: false,
+          message: "Product not found",
+        });
+      }
+
+      const relativePath = req.file.path.replace(/\\/g, "/");
+      const updateResult = await ProductService.updateProduct(
+        restaurantId,
+        id,
+        { arModelPath: relativePath },
+        domain
+      );
+
+      if (!updateResult.success) {
+        deleteFile(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: updateResult.message || "Failed to update product model association"
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "3D model uploaded and bound successfully!",
+        data: updateResult.data
+      });
+
+    } catch (error: any) {
+      logger.error("Product upload 3D controller error", {
+        error: error.message,
+      });
+      if (req.file) deleteFile(req.file.path);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during 3D upload",
+      });
+    }
+  }
+
+  /**
+   * @route   POST /api/v1/restaurant/product/generate-3d-premium/:id
+   * @desc    Generate 3D model using passcode-gated Tripo3D API
+   * @access  Private (Restaurant)
+   */
+  static async generate3DPremium(req: Request, res: Response): Promise<Response> {
+    try {
+      const restaurantId = req.user?.id;
+      const { id } = req.params;
+      const { passcode } = req.body;
+
+      if (!restaurantId) {
+        if (req.file) deleteFile(req.file.path);
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No image snapshot file found in request",
+        });
+      }
+
+      // Check passcode
+      const passcodeSetting = await SystemSetting.findOne({ key: "tripo_passcode" });
+      const serverPasscode = passcodeSetting ? passcodeSetting.value : "premium3d";
+
+      if (!passcode || passcode.trim() !== serverPasscode) {
+        deleteFile(req.file.path);
+        return res.status(403).json({
+          success: false,
+          message: "Invalid premium access passcode",
+        });
+      }
+
+      // Check Tripo API Key
+      const apiKeySetting = await SystemSetting.findOne({ key: "tripo_api_key" });
+      const tripoApiKey = apiKeySetting ? apiKeySetting.value : "";
+
+      if (!tripoApiKey) {
+        deleteFile(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: "Tripo3D API key is not configured by the system administrator.",
+        });
+      }
+
+      // Check if product exists (only if not creating a new product)
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+      const isTemp = id === "new" || id === "temp";
+      if (!isTemp) {
+        const productResult = await ProductService.getProductById(restaurantId, id, domain);
+        if (!productResult.success) {
+          deleteFile(req.file.path);
+          return res.status(404).json({
+            success: false,
+            message: "Product not found",
+          });
+        }
+      }
+
+      const tempImagePath = req.file.path;
+      logger.info("Premium Mode: Starting Tripo3D model generation pipeline...");
+
+      // 1. Upload file to Tripo3D V2 OpenAPI Upload API
+      const formData = new FormData();
+      const fileBuffer = fs.readFileSync(tempImagePath);
+      const blob = new Blob([fileBuffer], { type: req.file.mimetype });
+      formData.append("file", blob, req.file.originalname);
+
+      const uploadResponse = await fetch("https://api.tripo3d.ai/v2/openapi/upload", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${tripoApiKey}`
+        },
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        const errText = await uploadResponse.text();
+        throw new Error(`Tripo3D upload failed with status ${uploadResponse.status}: ${errText}`);
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const fileToken = uploadResult.data?.image_token || uploadResult.data?.file_token;
+      if (!fileToken) {
+        throw new Error("Tripo3D image upload did not return an image token.");
+      }
+
+      // 2. Submit image-to-3d generation task (V2 OpenAPI)
+      const taskResponse = await fetch("https://api.tripo3d.ai/v2/openapi/task", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tripoApiKey}`
+        },
+        body: JSON.stringify({
+          type: "image_to_model",
+          file: {
+            type: "png",
+            file_token: fileToken
+          }
+        })
+      });
+
+      if (!taskResponse.ok) {
+        const errText = await taskResponse.text();
+        throw new Error(`Tripo3D task submission failed with status ${taskResponse.status}: ${errText}`);
+      }
+
+      const taskResult = await taskResponse.json();
+      const taskId = taskResult.data?.task_id;
+      if (!taskId) {
+        throw new Error("Tripo3D task submission did not return a task_id.");
+      }
+
+      // 3. Poll task status until complete (V2 OpenAPI)
+      let glbUrl = "";
+      logger.info(`Tripo3D task submitted: ${taskId}. Polling for completion...`);
+
+      for (let i = 0; i < 25; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        
+        const pollResponse = await fetch(`https://api.tripo3d.ai/v2/openapi/task/${taskId}`, {
+          headers: {
+            "Authorization": `Bearer ${tripoApiKey}`
+          }
+        });
+
+        if (!pollResponse.ok) {
+          logger.warn(`Tripo3D poll error on iteration ${i + 1}, retrying...`);
+          continue;
+        }
+
+        const pollResult = await pollResponse.json();
+        const status = pollResult.data?.status;
+
+        if (status === "success") {
+          glbUrl = pollResult.data?.output?.model || pollResult.data?.result?.model;
+          break;
+        } else if (status === "failed") {
+          throw new Error("Tripo3D model generation failed on their cloud GPU.");
+        }
+      }
+
+      if (!glbUrl) {
+        throw new Error("Tripo3D generation timed out (exceeded 1 minute limit).");
+      }
+
+      // 4. Download generated GLB file
+      logger.info("Tripo3D model generated! Downloading GLB file...", { glbUrl });
+      const downloadResponse = await fetch(glbUrl);
+      if (!downloadResponse.ok) {
+        throw new Error(`Failed to download model from Tripo3D: ${downloadResponse.statusText}`);
+      }
+
+      const glbArrayBuffer = await downloadResponse.arrayBuffer();
+      const glbBuffer = Buffer.from(glbArrayBuffer);
+
+      // 5. Save GLB file locally in uploads/ar-models/
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const fileName = `ar-model-premium-${uniqueSuffix}.glb`;
+      const targetDir = path.join(process.cwd(), "uploads/ar-models");
+      
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const targetPath = path.join(targetDir, fileName);
+      fs.writeFileSync(targetPath, glbBuffer);
+      const generatedRelativePath = `uploads/ar-models/${fileName}`;
+
+      // 6. Update database record or return temp path
+      let responseData = null;
+      if (!isTemp) {
+        const updateResult = await ProductService.updateProduct(
+          restaurantId,
+          id,
+          { arModelPath: generatedRelativePath },
+          domain
+        );
+
+        if (!updateResult.success) {
+          deleteFile(tempImagePath);
+          return res.status(400).json({
+            success: false,
+            message: updateResult.message || "Failed to update product model association"
+          });
+        }
+        responseData = updateResult.data;
+      } else {
+        responseData = { arModelPath: generatedRelativePath };
+      }
+
+      // Delete temporary snapshot file
+      deleteFile(tempImagePath);
+
+      return res.status(200).json({
+        success: true,
+        message: isTemp ? "Premium 3D model successfully generated!" : "Premium 3D model successfully generated and bound to menu item!",
+        data: responseData
+      });
+
+    } catch (error: any) {
+      logger.error("Premium 3D generation controller error", {
+        error: error.message,
+      });
+      if (req.file) deleteFile(req.file.path);
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Internal server error during premium 3D generation",
+      });
+    }
+  }
+
+  /**
+   * @route   POST /api/v1/restaurant/product/generate-3d-standard/:id
+   * @desc    Generate 3D model using dedicated custom GPU server (Premium lite)
+   * @access  Private (Restaurant)
+   */
+  static async generate3DStandard(req: Request, res: Response): Promise<Response> {
+    try {
+      const restaurantId = req.user?.id;
+      const { id } = req.params;
+
+      if (!restaurantId) {
+        if (req.file) deleteFile(req.file.path);
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No image snapshot file found in request",
+        });
+      }
+
+      // Check if custom GPU URL is configured
+      const gpuUrlSetting = await SystemSetting.findOne({ key: "custom_gpu_url" });
+      let customGpuUrl = gpuUrlSetting ? gpuUrlSetting.value.trim() : "";
+
+      if (customGpuUrl.endsWith("/")) {
+        customGpuUrl = customGpuUrl.slice(0, -1);
+      }
+
+      if (!customGpuUrl) {
+        deleteFile(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: "Premium lite requires a custom GPU server URL to be configured in the Admin Dashboard.",
+        });
+      }
+
+      // Check if product exists (only if not creating a new product)
+      const domain = process.env.SELF_DOMAIN || `${req.protocol}://${req.get("host")}`;
+      const isTemp = id === "new" || id === "temp";
+      if (!isTemp) {
+        const productResult = await ProductService.getProductById(restaurantId, id, domain);
+        if (!productResult.success) {
+          deleteFile(req.file.path);
+          return res.status(404).json({
+            success: false,
+            message: "Product not found",
+          });
+        }
+      }
+
+      const tempImagePath = req.file.path;
+      logger.info(`Premium Lite Mode: Connecting to custom GPU server at ${customGpuUrl}/generate-3d...`);
+
+      // Forward image to custom GPU server using FormData
+      const formData = new FormData();
+      const fileBuffer = fs.readFileSync(tempImagePath);
+      const blob = new Blob([fileBuffer], { type: req.file.mimetype });
+      formData.append("file", blob, req.file.originalname);
+
+      const gpuResponse = await fetch(`${customGpuUrl}/generate-3d`, {
+        method: "POST",
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: formData,
+      });
+
+      if (!gpuResponse.ok) {
+        const errText = await gpuResponse.text();
+        if (errText.includes("<html") || errText.includes("<!DOCTYPE html>")) {
+          if (gpuResponse.status === 503 || errText.includes("ERR_NGROK_3004")) {
+            throw new Error("Custom GPU server timed out (503 Service Unavailable). This happens when running without a GPU (CPU mode is too slow and times out after 5 minutes). Please use a GPU runtime in Colab.");
+          } else if (gpuResponse.status === 502 || errText.includes("ERR_NGROK_3200")) {
+            throw new Error("Custom GPU server is offline (502 Bad Gateway). Please make sure the Colab server cell is actively running.");
+          }
+          throw new Error(`Custom GPU server returned HTML error (${gpuResponse.status}). Please check your Colab server logs.`);
+        }
+        throw new Error(`Custom GPU server returned status ${gpuResponse.status}: ${errText}`);
+      }
+
+      // Check if it's a JSON error response instead of GLB binary
+      const contentType = gpuResponse.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const jsonResponse = await gpuResponse.json();
+        if (jsonResponse.error) {
+          throw new Error(`Custom GPU server error: ${jsonResponse.error}. Details: ${jsonResponse.details || ""}`);
+        }
+      }
+
+      const glbArrayBuffer = await gpuResponse.arrayBuffer();
+      const glbBuffer = Buffer.from(glbArrayBuffer);
+
+      // Save GLB model locally in uploads/ar-models/
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const fileName = `ar-model-standard-lite-${uniqueSuffix}.glb`;
+      const targetDir = path.join(process.cwd(), "uploads/ar-models");
+
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const targetPath = path.join(targetDir, fileName);
+      fs.writeFileSync(targetPath, glbBuffer);
+      const generatedRelativePath = `uploads/ar-models/${fileName}`;
+
+      // Update database record or return temp path
+      let responseData = null;
+      if (!isTemp) {
+        const updateResult = await ProductService.updateProduct(
+          restaurantId,
+          id,
+          { arModelPath: generatedRelativePath },
+          domain
+        );
+
+        if (!updateResult.success) {
+          deleteFile(tempImagePath);
+          return res.status(400).json({
+            success: false,
+            message: updateResult.message || "Failed to update product model association"
+          });
+        }
+        responseData = updateResult.data;
+      } else {
+        responseData = { arModelPath: generatedRelativePath };
+      }
+
+      // Delete temporary snapshot file
+      deleteFile(tempImagePath);
+
+      return res.status(200).json({
+        success: true,
+        message: isTemp ? "Premium Lite 3D model successfully generated!" : "Premium Lite 3D model successfully generated and bound to menu item!",
+        data: responseData
+      });
+
+    } catch (error: any) {
+      logger.error("Premium Lite 3D generation controller error", {
+        error: error.message,
+      });
+      if (req.file) deleteFile(req.file.path);
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Internal server error during custom GPU 3D generation",
       });
     }
   }

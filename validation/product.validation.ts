@@ -62,7 +62,7 @@ export const createProductSchema = z.object({
       .min(0, "Preparation time cannot be negative")
       .optional(),
 
-    arModelPath: z.string().url("Invalid AR model URL").optional(),
+    arModelPath: z.string().optional(),
   }),
 });
 
@@ -101,7 +101,7 @@ export const updateProductSchema = z.object({
       .min(0, "Preparation time cannot be negative")
       .optional(),
 
-    arModelPath: z.string().url("Invalid AR model URL").optional(),
+    arModelPath: z.string().optional(),
   }),
 });
 

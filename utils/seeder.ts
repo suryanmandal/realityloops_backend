@@ -1,4 +1,4 @@
-import { Restaurant, Category, Product, FurnitureStore, FurnitureCategory, FurnitureProduct, Admin } from "../models";
+import { Restaurant, Category, Product, FurnitureStore, FurnitureCategory, FurnitureProduct, Admin, SystemSetting } from "../models";
 import { AccountStatus, CategoryStatus, ProductStatus } from "../types/enums";
 
 export async function seedDB() {
@@ -343,6 +343,21 @@ export async function seedDB() {
         permissions: ["ALL"],
       });
       console.log("✅ Seeded default admin account (admin@realityloops.com / password123)");
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       4. SEED DEFAULT SYSTEM SETTINGS (IF EMPTY)
+       ────────────────────────────────────────────────────────── */
+    const settingCount = await SystemSetting.countDocuments();
+    if (settingCount === 0) {
+      const defaultGpuUrl = process.env.CUSTOM_GPU_URL || "";
+      console.log("🌱 Seeding default system settings...");
+      await SystemSetting.create([
+        { key: "tripo_passcode", value: "premium3d" },
+        { key: "tripo_api_key", value: "" },
+        { key: "custom_gpu_url", value: defaultGpuUrl }
+      ]);
+      console.log(`✅ Seeded default system settings (tripo_passcode = premium3d, custom_gpu_url = '${defaultGpuUrl}')`);
     }
 
   } catch (error) {

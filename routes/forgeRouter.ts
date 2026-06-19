@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { ForgeController } from "../controllers";
-import { uploadProductImage } from "../middleware/upload.middleware";
+import { uploadProductFiles } from "../middleware/upload.middleware";
 
 const forgeRouter = Router();
 
 // Route to generate a new 3D AR model
-forgeRouter.post("/generate", uploadProductImage, ForgeController.generate);
+forgeRouter.post("/generate", uploadProductFiles, ForgeController.generate);
 
 // Route to get all public experiences (feed library)
 forgeRouter.get("/feed", ForgeController.getFeed);

@@ -2,6 +2,7 @@ import { Router } from "express";
 import authRouter from "./authRouter";
 import uploadRouter from "./uploadRouter";
 import restaurantAdminRouter from "./restaurantRouter";
+import settingsRouter from "./settingsRouter";
 import { authenticate, isAdmin } from "../../middleware/auth.middleware";
 
 const adminRouter = Router();
@@ -10,6 +11,9 @@ adminRouter.use("/auth", authRouter);
 
 // Protected admin routes (require authentication + admin role)
 adminRouter.use("/upload", authenticate, isAdmin, uploadRouter);
+
+// Admin settings routes
+adminRouter.use("/settings", authenticate, isAdmin, settingsRouter);
 
 // Admin restaurant management routes
 adminRouter.use("/restaurant", authenticate, isAdmin, restaurantAdminRouter);
