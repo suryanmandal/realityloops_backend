@@ -10,15 +10,20 @@ export default async (): Promise<void> => {
     let URL = process.env.MONGODB_URL;
 
     if (URL === "in-memory") {
-      try {
-        console.log("ℹ️ Starting in-memory MongoDB server...");
-        const { MongoMemoryServer } = require("mongodb-memory-server");
-        const mongoServer = await MongoMemoryServer.create();
-        URL = mongoServer.getUri();
-        console.log(`✅ In-memory MongoDB server started at: ${URL}`);
-      } catch (err: any) {
-        console.warn("⚠️ mongodb-memory-server package not found. Falling back to local MongoDB connection...");
+      if (process.env.NODE_ENV === "production") {
+        console.warn("⚠️ WARNING: 'in-memory' MongoDB is not allowed in production! Falling back to local persistent MongoDB...");
         URL = "mongodb://127.0.0.1:27017/realityloops";
+      } else {
+        try {
+          console.log("ℹ️ Starting in-memory MongoDB server...");
+          const { MongoMemoryServer } = require("mongodb-memory-server");
+          const mongoServer = await MongoMemoryServer.create();
+          URL = mongoServer.getUri();
+          console.log(`✅ In-memory MongoDB server started at: ${URL}`);
+        } catch (err: any) {
+          console.warn("⚠️ mongodb-memory-server package not found. Falling back to local MongoDB connection...");
+          URL = "mongodb://127.0.0.1:27017/realityloops";
+        }
       }
     }
 
